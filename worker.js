@@ -181,22 +181,23 @@ export default {
         // /start
         // ==========================================
 
-        if (
-          message.chat.type === "private" &&
-          message.text === "/start"
-        ) {
-          await env.USER_STATE.put(
-            chatId,
-            "allowed_to_send"
-          );
+       if (
+  message.chat.type === "private" &&
+  message.text === "/start"
+) {
+  await telegram("sendMessage", {
+    chat_id: chatId,
+    text: "س خ؟"
+  });
 
-          await telegram("sendMessage", {
-            chat_id: chatId,
-            text: "س خ؟"
-          });
+  await env.USER_STATE.put(
+    chatId,
+    "allowed_to_send"
+  );
 
-          return new Response("OK");
-        }
+  return new Response("OK");
+       } 
+        
 
         // ==========================================
         // پیام خصوصی کاربران
