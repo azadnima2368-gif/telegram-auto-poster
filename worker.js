@@ -172,12 +172,6 @@ export default {
       // ==========================================
       // MESSAGE
       // ==========================================
-if (update.message) {
-  await telegram("sendMessage", {
-    chat_id: update.message.chat.id,
-    text: "DEBUG ✅"
-  });
-}
       if (update.message) {
         const message = update.message;
         const chatId = String(message.chat.id);
