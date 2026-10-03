@@ -22,18 +22,16 @@ export default {
         return await response.json();
       }
 
-      // ==================================================
+      // ==========================================
       // CALLBACK QUERY
-      // ==================================================
+      // ==========================================
 
       if (update.callback_query) {
         const callback = update.callback_query;
         const data = callback.data || "";
         const callbackUserId = String(callback.from.id);
 
-        // ==================================================
-        // دکمه‌های کاربر
-        // ==================================================
+        // ---------- دکمه‌های کاربر ----------
 
         if (data === "user_yes") {
           await env.USER_STATE.put(
@@ -68,9 +66,7 @@ export default {
           return new Response("OK");
         }
 
-        // ==================================================
-        // از اینجا به بعد فقط ادمین
-        // ==================================================
+        // ---------- فقط ادمین ----------
 
         if (
           callbackUserId !== String(env.ADMIN_ID)
@@ -78,15 +74,13 @@ export default {
           return new Response("OK");
         }
 
-        // ==================================================
-        // انتشار
-        // ==================================================
+        // ---------- انتشار ----------
 
         if (data.startsWith("publish|")) {
           const parts = data.split("|");
 
-          const userChatId = parts[1];
-          const messageId = parts[2];
+          const senderChatId = parts[1];
+          const originalMessageId = parts[2];
 
           if (!env.CHANNEL_ID) {
             await telegram("answerCallbackQuery", {
@@ -99,8 +93,8 @@ export default {
 
           const result = await telegram("copyMessage", {
             chat_id: env.CHANNEL_ID,
-            from_chat_id: userChatId,
-            message_id: messageId
+            from_chat_id: senderChatId,
+            message_id: originalMessageId
           });
 
           if (!result.ok) {
@@ -112,7 +106,7 @@ export default {
             return new Response("OK");
           }
 
-          // حذف دکمه‌های تصمیم از پیام ادمین
+          // حذف دکمه‌های ادمین
           if (callback.message) {
             await telegram("editMessageReplyMarkup", {
               chat_id: callback.message.chat.id,
@@ -136,22 +130,19 @@ export default {
           return new Response("OK");
         }
 
-        // ==================================================
-        // رد کردن
-        // ==================================================
+        // ---------- رد کردن ----------
 
         if (data.startsWith("reject|")) {
           const parts = data.split("|");
 
-          const userChatId = parts[1];
+          const senderChatId = parts[1];
 
-          // ارسال پیام رد به کاربر
           await telegram("sendMessage", {
-            chat_id: userChatId,
+            chat_id: senderChatId,
             text: "😡😡"
           });
 
-          // حذف دکمه‌های تصمیم از پیام ادمین
+          // حذف دکمه‌های ادمین
           if (callback.message) {
             await telegram("editMessageReplyMarkup", {
               chat_id: callback.message.chat.id,
@@ -178,11 +169,172 @@ export default {
         return new Response("OK");
       }
 
-      // ==================================================
+      // ==========================================
       // MESSAGE
-      // ==================================================
+      // ==========================================
 
       if (update.message) {
         const message = update.message;
+        const chatId = String(message.chat.id);
 
-        const userChatId
+        // ==========================================
+        // /start
+        // ==========================================
+
+        if (
+          message.chat.type === "private" &&
+          message.text === "/start"
+        ) {
+          await env.USER_STATE.put(
+            chatId,
+            "allowed_to_send"
+          );
+
+          await telegram("sendMessage", {
+            chat_id: chatId,
+            text: "س خ؟"
+          });
+
+          return new Response("OK");
+        }
+
+        // ==========================================
+        // پیام خصوصی کاربران
+        // ==========================================
+
+        if (
+          message.chat.type === "private" &&
+          chatId !== String(env.ADMIN_ID)
+        ) {
+          const state =
+            await env.USER_STATE.get(chatId);
+
+          // کاربر ارسال را بسته
+          if (state === "closed") {
+            return new Response("OK");
+          }
+
+          // منتظر انتخاب کاربر
+          if (state === "awaiting_choice") {
+            await telegram("sendMessage", {
+              chat_id: chatId,
+              text: "اول یکی از دو گزینه رو بزن 👆"
+            });
+
+            return new Response("OK");
+          }
+
+          // اجازه ارسال ندارد
+          if (state !== "allowed_to_send") {
+            return new Response("OK");
+          }
+
+          // ========================================
+          // ثبت ارسال
+          // ========================================
+
+          await env.USER_STATE.put(
+            chatId,
+            "awaiting_choice"
+          );
+
+          // ========================================
+          // اطلاعات کاربر
+          // ========================================
+
+          const firstName =
+            message.from?.first_name || "بدون نام";
+
+          const lastName =
+            message.from?.last_name || "";
+
+          const username =
+            message.from?.username
+              ? `@${message.from.username}`
+              : "ندارد";
+
+          const userInfo =
+            `📩 ارسال جدید\n\n` +
+            `👤 نام: ${firstName} ${lastName}\n` +
+            `🆔 User ID: ${chatId}\n` +
+            `🔹 Username: ${username}`;
+
+          await telegram("sendMessage", {
+            chat_id: env.ADMIN_ID,
+            text: userInfo
+          });
+
+          // ========================================
+          // کپی محتوای کاربر برای ادمین
+          // ========================================
+
+          const copied =
+            await telegram("copyMessage", {
+              chat_id: env.ADMIN_ID,
+              from_chat_id: chatId,
+              message_id: message.message_id
+            });
+
+          // ========================================
+          // دکمه‌های ادمین
+          // ========================================
+
+          if (copied.ok) {
+            await telegram("sendMessage", {
+              chat_id: env.ADMIN_ID,
+              text: "با این ارسال چیکار کنیم؟",
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: "🐑 بف بف",
+                      callback_data:
+                        `publish|${chatId}|${message.message_id}`
+                    },
+                    {
+                      text: "🚫 نخ اص",
+                      callback_data:
+                        `reject|${chatId}`
+                    }
+                  ]
+                ]
+              }
+            });
+          }
+
+          // ========================================
+          // سوال از کاربر
+          // ========================================
+
+          await telegram("sendMessage", {
+            chat_id: chatId,
+            text: "نون میخواین؟",
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: "✅ تیک",
+                    callback_data: "user_yes"
+                  },
+                  {
+                    text: "❌ ضربدر",
+                    callback_data: "user_no"
+                  }
+                ]
+              ]
+            }
+          });
+
+          return new Response("OK");
+        }
+      }
+
+      return new Response("OK");
+
+    } catch (error) {
+      console.log("ERROR:", error);
+
+      return new Response("OK");
+    }
+  }
+};
