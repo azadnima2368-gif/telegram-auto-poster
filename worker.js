@@ -259,10 +259,13 @@ export default {
             `🆔 User ID: ${chatId}\n` +
             `🔹 Username: ${username}`;
 
-          await telegram("sendMessage", {
-            chat_id: env.ADMIN_ID,
-            text: userInfo
-          });
+          const adminResult = await telegram("sendMessage", {
+  chat_id: env.ADMIN_ID,
+  text: userInfo
+});
+
+console.log("ADMIN RESULT:", JSON.stringify(adminResult));
+
 console.log("ADMIN MESSAGE SENT");
           // ========================================
           // کپی محتوای کاربر برای ادمین
