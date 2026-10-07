@@ -263,7 +263,7 @@ export default {
             chat_id: env.ADMIN_ID,
             text: userInfo
           });
-
+console.log("ADMIN MESSAGE SENT");
           // ========================================
           // کپی محتوای کاربر برای ادمین
           // ========================================
