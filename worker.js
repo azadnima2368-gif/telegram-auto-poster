@@ -264,7 +264,10 @@ export default {
   text: userInfo
 });
 
-console.log("ADMIN RESULT:", JSON.stringify(adminResult));
+await telegram("sendMessage", {
+  chat_id: env.ADMIN_ID,
+  text: "ADMIN RESULT: " + JSON.stringify(adminResult)
+});
 
 console.log("ADMIN MESSAGE SENT");
           // ========================================
