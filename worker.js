@@ -342,7 +342,7 @@ console.log("ADMIN MESSAGE SENT");
       return new Response("OK");
 
     } catch (error) {
-      console.log("ERROR:", error);
+      console.log("ERROR:", error?.stack || error?.message || String(error));
 
       return new Response("OK");
     }
