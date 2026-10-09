@@ -173,6 +173,7 @@ export default {
       // MESSAGE
       // ==========================================
       if (update.message) {
+        console.log("MESSAGE RECEIVED");
         const message = update.message;
         const chatId = String(message.chat.id);
 
