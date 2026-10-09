@@ -208,7 +208,10 @@ export default {
         ) {
           const state =
             await env.USER_STATE.get(chatId);
-
+           await telegram("sendMessage", {
+  chat_id: chatId,
+  text: "DEBUG STATE: " + String(state)
+});
           // کاربر ارسال را بسته
           if (state === "closed") {
             return new Response("OK");
